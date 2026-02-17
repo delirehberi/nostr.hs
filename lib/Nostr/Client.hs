@@ -26,6 +26,8 @@ module Nostr.Client
   , getContacts
   , follow
   , unfollow
+    -- * Event Deletion (NIP-09)
+  , deleteEvents
     -- * Helpers
   , parsePubKey
     -- * Publishing
@@ -308,6 +310,28 @@ publishContacts keys contacts = do
               ++ (case contactRelay c of Just r -> [r]; Nothing -> [""])
               ++ (case contactPetname c of Just p -> [p]; Nothing -> [])
       in withTag tags eb
+
+-- ============================================================================
+-- Event Deletion (NIP-09)
+-- ============================================================================
+
+-- | Delete events (Kind 5)
+-- @
+-- deleteEvents keys [eventId1, eventId2] (Just "user request")
+-- @
+deleteEvents :: Keys -> [EventId] -> Maybe Text -> NostrApp ()
+deleteEvents keys eventIds reason = do
+  let content = case reason of
+        Just r -> r
+        Nothing -> ""
+        
+  let builder = shortNote content
+              & withKind 5
+  
+  -- Add "e" tags for each event ID
+  let builderWithTags = foldl (\eb (EventId eid) -> withTag ["e", eid] eb) builder eventIds
+  
+  publish keys builderWithTags
 
 -- | Build, sign, and publish an event from an EventBuilder
 publish :: Keys -> EventBuilder -> NostrApp ()
