@@ -63,8 +63,13 @@ jobs:
       - name: Build sdist
         run: cabal sdist
 
+      - name: Resolve sdist path
+        run: |
+          SDIST_PATH=$(ls dist-newstyle/sdist/*.tar.gz)
+          echo "SDIST_PATH=$SDIST_PATH" >> $GITHUB_ENV
+
       - name: Upload to Hackage
         uses: haskell-actions/hackage-publish@v1
         with:
           hackageToken: ${{ secrets.HACKAGE_AUTH_TOKEN }}
-          packagesPath: dist-newstyle/sdist/*.tar.gz
+          packagesPath: ${{ env.SDIST_PATH }}

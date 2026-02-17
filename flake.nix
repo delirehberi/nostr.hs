@@ -11,7 +11,6 @@
     haskellPackages = pkgs.haskell.packages.ghc982; # GHC 9.8.2 for better compatibility
   in {
     devShells.${system} = rec {
-      # Shell for routr-tracking-service (Cabal)
       nostrHs = pkgs.mkShell {
         buildInputs = with pkgs; [
           haskellPackages.ghc # Use GHC 9.10.1
