@@ -31,7 +31,6 @@ module Nostr.Event
   -- * Event Creation
   , createUnsignedEvent
   , validateEvent
-  , verifyEventId
   
   -- * Serialization
   , serializeForSigning
@@ -211,13 +210,7 @@ validateEvent event = do
     when True action = action
     when False _ = Right ()
 
--- | Verify that the event ID matches the computed hash
--- This will be implemented in Nostr.Crypto module
-verifyEventId :: Event -> Bool
-verifyEventId _event = 
-  -- TODO: Implement in Crypto module
-  -- computeEventId event == eventId event
-  True
+
 
 -- | Serialize event for signing (NIP-01 format)
 -- Returns the JSON array: [0, <pubkey>, <created_at>, <kind>, <tags>, <content>]

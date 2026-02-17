@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE UnboxedTuples #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 {-|
 Module      : Nostr.Crypto
@@ -22,11 +23,14 @@ module Nostr.Crypto
   , exportSecKey
   , exportPubKey
   , secKeyFromBytes
+  , Keys(..)
+  , validateKeys
   
   -- * Event Operations
   , computeEventId
   , signEvent
   , verifySignature
+  , validateEvent
   , serializeEventForId
   
   -- * Utilities
@@ -44,14 +48,15 @@ import Data.ByteString (ByteString)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Data.Aeson (encode, object, toJSON, (.=))
+import Data.Aeson (encode, toJSON)
+import GHC.Generics (Generic) -- Added this line
 -- import Data.Word (Word64) -- Hiding this to import from GHC.Word
 import qualified System.Entropy as E
 import Data.Word.Wider (Wider(..))
 import Data.Word.Limb (Limb(..))
 import GHC.Word (Word64(..), Word(..))
 
-import Nostr.Event
+import Nostr.Event hiding (validateEvent)
 
 -- | Secret key (private key) for signing - 32-byte wide word
 type SecKey = Wider
@@ -109,6 +114,27 @@ secKeyFromBytes bs
       let ws = BS.unpack b
           w = foldr (\byte acc -> acc * 256 + fromIntegral byte) 0 ws
       in (w, BS.drop 8 b)
+
+
+
+-- ... (keep existing imports)
+
+-- | Keys struct to hold key pair and optional relay info
+data Keys = Keys
+  { keysSecKey :: SecKey
+  , keysPubKey :: PubKey
+  , keysRelay  :: Maybe Text
+  } deriving (Show, Generic)
+
+-- | Equality check for Keys (compares PubKey and Relay only, ignores SecKey)
+instance Eq Keys where
+  (Keys _ p1 r1) == (Keys _ p2 r2) = p1 == p2 && r1 == r2
+
+-- | Validate that the public key matches the secret key
+validateKeys :: Keys -> IO Bool
+validateKeys (Keys sec pub _) = do
+  derived <- pubKeyFromSecKey sec
+  return $ derived == pub
 
 -- | Export secret key as hex string
 -- Note: In production, secret keys should never be exported
@@ -199,6 +225,14 @@ verifySignature event = do
                 Just pubKeyPoint ->
                   -- Verify Schnorr signature
                   return $ Secp.verify_schnorr idBytes pubKeyPoint sigBytes
+
+-- | Validate event by checking both ID integrity and signature
+validateEvent :: Event -> IO Bool
+validateEvent event = do
+  let computedId = computeEventId event
+  if computedId /= eventId event
+    then return False
+    else verifySignature event
 
 -- ============================================================================
 -- Utility Functions

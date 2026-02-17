@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {-|
 Module      : Nostr.Relay
@@ -18,7 +19,7 @@ module Nostr.Relay
   , ClientMessage(..)
   , RelayMessage(..)
   , Filter(..)
-  , RelayConnection
+  , RelayConnection(..)
   
   -- * Filter Helpers
   , defaultFilter
@@ -30,17 +31,19 @@ module Nostr.Relay
   , closeConnection
   ) where
 
-import Data.Aeson (FromJSON(..), ToJSON(..), Value(..), object, withArray, withObject, (.:), (.:?), (.=))
+import Control.Concurrent (forkIO, killThread, threadDelay)
+import Control.Concurrent.STM
+import Control.Exception (finally, catch, SomeException)
+import Control.Monad (forever)
+import Data.Aeson (FromJSON(..), ToJSON(..), object, withArray, withObject, (.:?), (.=))
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
-import Data.ByteString.Lazy (ByteString)
-import qualified Data.ByteString.Lazy as BL
 import Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as TE
 import qualified Data.Vector as V
 import GHC.Generics (Generic)
 import qualified Network.WebSockets as WS
+import qualified Wuss
 
 import Nostr.Event
 
@@ -217,15 +220,15 @@ defaultFilter = Filter
   }
 
 instance ToJSON Filter where
-  toJSON filter = object $ catMaybes
-    [ ("ids" .=) <$> filterIds filter
-    , ("authors" .=) <$> filterAuthors filter
-    , ("kinds" .=) <$> filterKinds filter
-    , ("#e" .=) <$> filterETags filter
-    , ("#p" .=) <$> filterPTags filter
-    , ("since" .=) <$> filterSince filter
-    , ("until" .=) <$> filterUntil filter
-    , ("limit" .=) <$> filterLimit filter
+  toJSON f = object $ catMaybes
+    [ ("ids" .=) <$> filterIds f
+    , ("authors" .=) <$> filterAuthors f
+    , ("kinds" .=) <$> filterKinds f
+    , ("#e" .=) <$> filterETags f
+    , ("#p" .=) <$> filterPTags f
+    , ("since" .=) <$> filterSince f
+    , ("until" .=) <$> filterUntil f
+    , ("limit" .=) <$> filterLimit f
     ]
     where
       catMaybes :: [Maybe a] -> [a]
@@ -247,49 +250,78 @@ instance FromJSON Filter where
 -- ============================================================================
 
 -- | Relay WebSocket connection
--- Contains the WebSocket connection for communicating with a relay
 data RelayConnection = RelayConnection
   { relayUrl :: Text
-  , relayConn :: WS.Connection
+  , sendChan :: TChan ClientMessage
+  , recvChan :: TChan RelayMessage
+  , cleanup  :: IO ()
   }
 
 -- | Connect to a Nostr relay via WebSocket
--- Takes a relay URL (e.g., "wss://relay.damus.io")
+-- Takes a relay URL (e.g., "wss://relay.damus.io") and starts background threads
 connectRelay :: Text -> IO RelayConnection
 connectRelay url = do
-  let (host, path) = parseRelayUrl url
-  WS.runClient (T.unpack host) 443 (T.unpack path) $ \conn -> do
-    return $ RelayConnection url conn
+  sChan <- newTChanIO
+  rChan <- newTChanIO
+  
+  let (isSecure, host, port, path) = parseRelayUrl url
+  
+  -- Connection handler shared between secure and plain connections
+  let wsApp conn = do
+        -- Fork a sender thread that reads from sChan and sends to WS
+        senderTid <- forkIO $ forever $ do
+          msg <- atomically $ readTChan sChan
+          WS.sendTextData conn (A.encode msg)
+        
+        -- Main loop: receive from WS and write to rChan
+        flip finally (killThread senderTid) $ forever $ do
+          msgData <- WS.receiveData conn
+          case A.eitherDecode msgData of
+            Right relayMsg -> atomically $ writeTChan rChan relayMsg
+            Left _ -> return ()
+  
+  -- Connection loop with exponential backoff
+  let connectLoop delay = do
+        let runConn = if isSecure
+              then Wuss.runSecureClient (T.unpack host) (fromIntegral port) (T.unpack path) wsApp
+              else WS.runClient (T.unpack host) port (T.unpack path) wsApp
+        catch runConn (\(_ :: SomeException) -> do
+          threadDelay delay
+          let newDelay = min 60000000 (delay * 2)
+          connectLoop newDelay
+          )
+            
+  tid <- forkIO $ connectLoop 1000000 -- Start with 1 second delay
+  
+  return $ RelayConnection url sChan rChan (killThread tid)
   where
-    -- Parse relay URL to extract host and path
-    -- Simple parser for wss://host/path format
-    parseRelayUrl :: Text -> (Text, Text)
+    -- Parse relay URL to extract scheme, host, port, and path
+    parseRelayUrl :: Text -> (Bool, Text, Int, Text)
     parseRelayUrl u =
-      let u' = case T.stripPrefix "wss://" u of
-                 Just stripped -> stripped
-                 Nothing -> case T.stripPrefix "ws://" u of
-                              Just stripped -> stripped
-                              Nothing -> u
-          (host, pathWithSlash) = T.breakOn "/" u'
+      let (secure, stripped) = case T.stripPrefix "wss://" u of
+            Just s  -> (True, s)
+            Nothing -> case T.stripPrefix "ws://" u of
+              Just s  -> (False, s)
+              Nothing -> (True, u) -- Default to secure
+          (hostPort, pathWithSlash) = T.breakOn "/" stripped
           path = if T.null pathWithSlash then "/" else pathWithSlash
-      in (host, path)
+          (host, portText) = T.breakOn ":" hostPort
+          port = case T.stripPrefix ":" portText of
+            Just p  -> case reads (T.unpack p) of
+              [(n, "")] -> n
+              _         -> if secure then 443 else 80
+            Nothing -> if secure then 443 else 80
+      in (secure, host, port, path)
 
 -- | Send a client message to the relay
 sendMessage :: RelayConnection -> ClientMessage -> IO ()
-sendMessage conn msg = do
-  let jsonMsg = A.encode msg
-  WS.sendTextData (relayConn conn) jsonMsg
+sendMessage conn msg = atomically $ writeTChan (sendChan conn) msg
 
 -- | Receive a relay message from the relay
 -- This is a blocking operation that waits for the next message
-receiveMessage :: RelayConnection -> IO (Either Text RelayMessage)
-receiveMessage conn = do
-  msgData <- WS.receiveData (relayConn conn) :: IO ByteString
-  case A.eitherDecode msgData of
-    Right relayMsg -> return $ Right relayMsg
-    Left err -> return $ Left $ "Failed to parse relay message: " <> T.pack err
+receiveMessage :: RelayConnection -> IO RelayMessage
+receiveMessage conn = atomically $ readTChan (recvChan conn)
 
 -- | Close the relay connection
 closeConnection :: RelayConnection -> IO ()
-closeConnection conn = 
-  WS.sendClose (relayConn conn) ("Closing connection" :: Text)
+closeConnection conn = cleanup conn

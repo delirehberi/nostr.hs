@@ -20,6 +20,16 @@
   (major1) == 2 && (major2) <  2 || \
   (major1) == 2 && (major2) == 2 && (minor) <= 3)
 #endif /* MIN_VERSION_aeson */
+/* package async-2.2.6 */
+#ifndef VERSION_async
+#define VERSION_async "2.2.6"
+#endif /* VERSION_async */
+#ifndef MIN_VERSION_async
+#define MIN_VERSION_async(major1,major2,minor) (\
+  (major1) <  2 || \
+  (major1) == 2 && (major2) <  2 || \
+  (major1) == 2 && (major2) == 2 && (minor) <= 6)
+#endif /* MIN_VERSION_async */
 /* package base-4.19.1.0 */
 #ifndef VERSION_base
 #define VERSION_base "4.19.1.0"
@@ -50,6 +60,16 @@
   (major1) == 0 && (major2) <  12 || \
   (major1) == 0 && (major2) == 12 && (minor) <= 1)
 #endif /* MIN_VERSION_bytestring */
+/* package containers-0.6.8 */
+#ifndef VERSION_containers
+#define VERSION_containers "0.6.8"
+#endif /* VERSION_containers */
+#ifndef MIN_VERSION_containers
+#define MIN_VERSION_containers(major1,major2,minor) (\
+  (major1) <  0 || \
+  (major1) == 0 && (major2) <  6 || \
+  (major1) == 0 && (major2) == 6 && (minor) <= 8)
+#endif /* MIN_VERSION_containers */
 /* package cryptonite-0.30 */
 #ifndef VERSION_cryptonite
 #define VERSION_cryptonite "0.30"
@@ -80,6 +100,16 @@
   (major1) == 0 && (major2) <  18 || \
   (major1) == 0 && (major2) == 18 && (minor) <= 0)
 #endif /* MIN_VERSION_memory */
+/* package mtl-2.3.1 */
+#ifndef VERSION_mtl
+#define VERSION_mtl "2.3.1"
+#endif /* VERSION_mtl */
+#ifndef MIN_VERSION_mtl
+#define MIN_VERSION_mtl(major1,major2,minor) (\
+  (major1) <  2 || \
+  (major1) == 2 && (major2) <  3 || \
+  (major1) == 2 && (major2) == 3 && (minor) <= 1)
+#endif /* MIN_VERSION_mtl */
 /* package nonempty-wrapper-text-0.1.1.0 */
 #ifndef VERSION_nonempty_wrapper_text
 #define VERSION_nonempty_wrapper_text "0.1.1.0"
@@ -110,6 +140,16 @@
   (major1) == 0 && (major2) <  5 || \
   (major1) == 0 && (major2) == 5 && (minor) <= 4)
 #endif /* MIN_VERSION_ppad_secp256k1 */
+/* package stm-2.5.2.1 */
+#ifndef VERSION_stm
+#define VERSION_stm "2.5.2.1"
+#endif /* VERSION_stm */
+#ifndef MIN_VERSION_stm
+#define MIN_VERSION_stm(major1,major2,minor) (\
+  (major1) <  2 || \
+  (major1) == 2 && (major2) <  5 || \
+  (major1) == 2 && (major2) == 5 && (minor) <= 2)
+#endif /* MIN_VERSION_stm */
 /* package text-2.1.1 */
 #ifndef VERSION_text
 #define VERSION_text "2.1.1"
@@ -120,6 +160,16 @@
   (major1) == 2 && (major2) <  1 || \
   (major1) == 2 && (major2) == 1 && (minor) <= 1)
 #endif /* MIN_VERSION_text */
+/* package time-1.12.2 */
+#ifndef VERSION_time
+#define VERSION_time "1.12.2"
+#endif /* VERSION_time */
+#ifndef MIN_VERSION_time
+#define MIN_VERSION_time(major1,major2,minor) (\
+  (major1) <  1 || \
+  (major1) == 1 && (major2) <  12 || \
+  (major1) == 1 && (major2) == 12 && (minor) <= 2)
+#endif /* MIN_VERSION_time */
 /* package unix-time-0.4.17 */
 #ifndef VERSION_unix_time
 #define VERSION_unix_time "0.4.17"
@@ -150,6 +200,16 @@
   (major1) == 0 && (major2) <  13 || \
   (major1) == 0 && (major2) == 13 && (minor) <= 0)
 #endif /* MIN_VERSION_websockets */
+/* package wuss-2.0.2.6 */
+#ifndef VERSION_wuss
+#define VERSION_wuss "2.0.2.6"
+#endif /* VERSION_wuss */
+#ifndef MIN_VERSION_wuss
+#define MIN_VERSION_wuss(major1,major2,minor) (\
+  (major1) <  2 || \
+  (major1) == 2 && (major2) <  0 || \
+  (major1) == 2 && (major2) == 0 && (minor) <= 2)
+#endif /* MIN_VERSION_wuss */
 
 /* tool cpphs-1.20.9 */
 #ifndef TOOL_VERSION_cpphs
