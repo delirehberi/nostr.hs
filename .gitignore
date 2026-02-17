@@ -1,1 +1,9 @@
 .env
+.env.dist
+.envrc
+dist-newstyle/
+*.log
+*.hi
+*.o
+*.dyn_hi
+*.dyn_o
