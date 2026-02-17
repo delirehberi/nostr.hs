@@ -8,19 +8,22 @@
   outputs = { self, nixpkgs }: let
     system = "x86_64-linux";
     pkgs = import nixpkgs { inherit system; };
+    haskellPackages = pkgs.haskell.packages.ghc982; # GHC 9.8.2 for better compatibility
   in {
     devShells.${system} = rec {
       # Shell for routr-tracking-service (Cabal)
       nostrHs = pkgs.mkShell {
         buildInputs = with pkgs; [
+          haskellPackages.ghc # Use GHC 9.10.1
           cabal-install
-          haskell.compiler.ghc965
           haskellPackages.haskell-language-server
-          haskellPackages.ghcid
-          zlib
-          zlib.dev
+          haskellPackages.haskell-dap
+          haskellPackages.ghci-dap
+          haskellPackages.haskell-debug-adapter
           pkg-config
           secp256k1
+          zlib 
+          zlib.dev 
         ];
 
         shellHook = ''

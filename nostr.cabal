@@ -71,18 +71,20 @@ library
     -- other-extensions:
     
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.18.2.1
+    build-depends:    base >=4.18.0.0 && <4.20
         , aeson 
         , bytestring 
         , text 
         , unix-time 
         , websockets
-        , secp256k1-haskell >= 1.4.6
+        , ppad-secp256k1 >= 0.4.0
+        , ppad-fixed
         , nonempty-wrapper-text
         , cryptonite
         , memory
         , base16-bytestring
         , vector
+        , entropy
 
     -- Directories containing source files.
     hs-source-dirs:   lib
@@ -105,7 +107,7 @@ executable nostr
 
     -- Other library packages from which modules are imported.
     build-depends:
-        base ^>=4.18.2.1,
+        base >=4.18.0.0 && <4.20,
         nostr,
         aeson,
         bytestring,
@@ -142,5 +144,5 @@ test-suite nostr-test
 
     -- Test dependencies.
     build-depends:
-        base ^>=4.18.2.1,
+        base >=4.18.0.0 && <4.20,
         nostr
