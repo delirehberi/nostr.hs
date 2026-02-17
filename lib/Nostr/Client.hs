@@ -21,6 +21,11 @@ module Nostr.Client
   , withMentionRelay
   , withAddressRef
   , withAddressRefRelay
+    -- * Contact Lists (NIP-02)
+  , Contact(..)
+  , getContacts
+  , follow
+  , unfollow
     -- * Publishing
   , publish
   , publishEvent
@@ -34,8 +39,9 @@ import Control.Exception (catch, SomeException)
 import Control.Monad (forM_)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (ReaderT, runReaderT, asks)
+import Data.Function ((&))
 import Data.List (nub)
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time.Clock.POSIX (getPOSIXTime)
@@ -153,12 +159,18 @@ data EventBuilder = EventBuilder
   , ebContent :: Text
   } deriving (Show, Eq)
 
+mkEvent :: EventBuilder 
+mkEvent = EventBuilder
+  {
+    ebKind = 1
+  , ebTags = []
+  , ebContent = ""
+  }
 -- | Create an event builder for a short text note (kind 1)
 shortNote :: Text -> EventBuilder
-shortNote content = EventBuilder
-  { ebKind    = 1
-  , ebTags    = []
-  , ebContent = content
+shortNote content = mkEvent
+  { 
+    ebContent = content
   }
 
 -- | Set the event kind
@@ -206,6 +218,79 @@ withAddressRefRelay :: Kind -> Text -> Text -> Text -> EventBuilder -> EventBuil
 withAddressRefRelay kind pubkey dTag relay = 
   let addr = T.pack (show kind) <> ":" <> pubkey <> ":" <> dTag
   in withTag ["a", addr, relay]
+
+-- ============================================================================
+-- Contact Lists (NIP-02)
+-- ============================================================================
+
+data Contact = Contact
+  { contactPubkey  :: Text
+  , contactRelay   :: Maybe Text
+  , contactPetname :: Maybe Text
+  } deriving (Show, Eq)
+
+-- | Fetch the user's latest contact list (Kind 3)
+getContacts :: Keys -> NostrApp [Contact]
+getContacts keys = do
+  let filter = defaultFilter
+        { filterKinds   = Just [3]
+        , filterAuthors = Just [keysPubKey keys]
+        , filterLimit   = Just 1
+        }
+  events <- queryEvents filter
+  
+  -- We only care about the latest event if multiple returned (though limit 1 helps)
+  -- But since queryEvents aggregates from multiple relays, we might get substitutes.
+  -- We should sort by created_at.
+  -- For now, just taking the first one if available.
+  case events of
+    [] -> return []
+    (e:_) -> return $ mapMaybe parseContact (eventTags e)
+  where
+    parseContact :: Tag -> Maybe Contact
+    parseContact tag = case tag of
+      ("p" : pubkey : rest) -> 
+        let relay   = if null rest then Nothing else Just (head rest)
+            petname = if length rest > 1 then Just (rest !! 1) else Nothing
+        in Just $ Contact pubkey relay petname
+      _ -> Nothing
+
+-- | Follow a user
+follow :: Keys -> Text -> Maybe Text -> Maybe Text -> NostrApp ()
+follow keys targetPubkey relay petname = do
+  contacts <- getContacts keys
+  
+  -- Check if already following
+  let startContacts = Prelude.filter (\c -> contactPubkey c /= targetPubkey) contacts
+  let newContact = Contact targetPubkey relay petname
+  let newContacts = startContacts ++ [newContact]
+  
+  publishContacts keys newContacts
+
+-- | Unfollow a user
+unfollow :: Keys -> Text -> NostrApp ()
+unfollow keys targetPubkey = do
+  contacts <- getContacts keys
+  let newContacts = Prelude.filter (\c -> contactPubkey c /= targetPubkey) contacts
+  publishContacts keys newContacts
+
+-- | Helper to publish the contact list
+publishContacts :: Keys -> [Contact] -> NostrApp ()
+publishContacts keys contacts = do
+  let builder = shortNote "" 
+              & withKind 3
+  
+  -- Add all contacts as "p" tags
+  let builderWithTags = foldl addContactTag builder contacts
+  
+  publish keys builderWithTags
+  where
+    addContactTag :: EventBuilder -> Contact -> EventBuilder
+    addContactTag eb c = 
+      let tags = ["p", contactPubkey c]
+              ++ (case contactRelay c of Just r -> [r]; Nothing -> [""])
+              ++ (case contactPetname c of Just p -> [p]; Nothing -> [])
+      in withTag tags eb
 
 -- | Build, sign, and publish an event from an EventBuilder
 publish :: Keys -> EventBuilder -> NostrApp ()

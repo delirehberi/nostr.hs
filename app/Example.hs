@@ -51,6 +51,21 @@ main = do
     
     liftIO $ putStrLn "Wait 3 seconds for propagation..."
     liftIO $ threadDelay 3000000
+
+    -- NIP-02: Follow a user
+    liftIO $ putStrLn "Following Jack (founder)..."
+    -- delirehberi's pubkey: npub1gmeu0wenescpjpymwmwgnkaedc6vy3aamf5tdtvxxf5z0yll3gdqatwl3v
+    let jackPubkey = "82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbf71d22"
+    let delirehberiPubkey = "npub1gmeu0wenescpjpymwmwgnkaedc6vy3aamf5tdtvxxf5z0yll3gdqatwl3v"
+    follow keys jackPubkey (Just "wss://relay.damus.io") (Just "jack")
+    follow keys delirehberiPubkey (Just "wss://relay.damus.io") (Just "delirehberi@emre.xyz")
+    
+    liftIO $ putStrLn "Wait 3 seconds..."
+    liftIO $ threadDelay 3000000
+    
+    -- Fetch contacts
+    contacts <- getContacts keys
+    liftIO $ putStrLn $ "My Contacts: " ++ show contacts
     
     -- Query for the note
     liftIO $ putStrLn "Querying for my notes..."

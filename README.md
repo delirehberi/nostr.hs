@@ -79,6 +79,15 @@ main = do
     events <- queryEvents filter
     liftIO $ print events
 
+    -- D. Follow Users (NIP-02)
+    -- This fetches your existing contact list (Kind 3), adds the user, and republishes.
+    liftIO $ putStrLn "Following Jack..."
+    follow keys "82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbf71d22" (Just "wss://relay.damus.io") (Just "jack")
+
+    -- E. Fetch Contacts
+    contacts <- getContacts keys
+    liftIO $ print contacts
+
   -- 3. Disconnect
   disconnect env
 ```
