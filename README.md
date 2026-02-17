@@ -9,6 +9,17 @@ A NIP-01 compliant Nostr library and client implementation in Haskell.
 - **Relay Communication**: WebSocket-based communication with Nostr relays.
 - **Type Safety**: Strong types for Event IDs, Public Keys, and Signatures.
 
+## Implemented NIPs
+
+- [x] NIP-01: Basic protocol flow
+- [x] NIP-02: Contact Lists
+- [ ] NIP-05: DNS-based verification
+- [ ] NIP-10: Threading and Mentions
+- [x] NIP-19: bech32-encoded entities
+- [ ] NIP-21: nostr: URI scheme
+- [ ] NIP-42: Relay Authentication
+
+
 ## Installation
 
 This project uses **Nix** for reproducible builds.

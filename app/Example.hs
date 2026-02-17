@@ -12,6 +12,7 @@ import Nostr.Client
 import Nostr.Event
 import Nostr.Relay
 import Nostr.Crypto
+import Nostr.Nip19
 
 main :: IO ()
 main = do
@@ -21,7 +22,14 @@ main = do
   (secKey, pubKey) <- generateKeyPair
   let keys = Keys secKey pubKey (Just "wss://relay.damus.io") -- Example
   
-  putStrLn $ "Generated Public Key: " ++ T.unpack (unPubKey pubKey)
+  putStrLn $ "Generated Public Key (Hex): " ++ T.unpack (unPubKey pubKey)
+  case toNpub pubKey of
+    Just npub -> putStrLn $ "Generated Public Key (NIP-19): " ++ T.unpack npub
+    Nothing -> putStrLn "Failed to encode npub"
+    
+  case toNsec secKey of
+    Just nsec -> putStrLn $ "Generated Secret Key (NIP-19): " ++ T.unpack nsec
+    Nothing -> putStrLn "Failed to encode nsec"
   
   -- 2. Define relays
   let relays = 
@@ -45,9 +53,9 @@ main = do
     liftIO $ putStrLn "Publishing long-form article..."
     publish keys $ shortNote "My first long-form article from Haskell!"
       & withKind 30023
-      & withAddressRef 30023 (unPubKey pubKey) "haskell-nostr-intro"
+      & withAddressRef 30023 pubKey "haskell-nostr-intro"
       & withTag ["title", "Getting Started with Nostr in Haskell"]
-      & withMention (unPubKey pubKey)
+      & withMention pubKey
     
     liftIO $ putStrLn "Wait 3 seconds for propagation..."
     liftIO $ threadDelay 3000000
@@ -56,9 +64,17 @@ main = do
     liftIO $ putStrLn "Following Jack (founder)..."
     -- delirehberi's pubkey: npub1gmeu0wenescpjpymwmwgnkaedc6vy3aamf5tdtvxxf5z0yll3gdqatwl3v
     let jackPubkey = "82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbf71d22"
-    let delirehberiPubkey = "npub1gmeu0wenescpjpymwmwgnkaedc6vy3aamf5tdtvxxf5z0yll3gdqatwl3v"
-    follow keys jackPubkey (Just "wss://relay.damus.io") (Just "jack")
-    follow keys delirehberiPubkey (Just "wss://relay.damus.io") (Just "delirehberi@emre.xyz")
+    
+    case parsePubKey jackPubkey of
+      Just pk -> follow keys pk (Just "wss://relay.damus.io") (Just "jack")
+      Nothing -> liftIO $ putStrLn "Invalid Jack pubkey"
+    
+    let delirehberiNpub = "npub1gmeu0wenescpjpymwmwgnkaedc6vy3aamf5tdtvxxf5z0yll3gdqatwl3v"
+    case parsePubKey delirehberiNpub of
+       Just pk -> do
+         liftIO $ putStrLn $ "Following delirehberi (decoded from " ++ T.unpack delirehberiNpub ++ ")"
+         follow keys pk (Just "wss://relay.damus.io") (Just "delirehberi@emre.xyz")
+       Nothing -> liftIO $ putStrLn "Error: Not a public key"
     
     liftIO $ putStrLn "Wait 3 seconds..."
     liftIO $ threadDelay 3000000

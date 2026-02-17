@@ -52,6 +52,8 @@ import Data.Aeson (encode, toJSON)
 import GHC.Generics (Generic) -- Added this line
 -- import Data.Word (Word64) -- Hiding this to import from GHC.Word
 import qualified System.Entropy as E
+import Data.Bits (shiftR)
+import Data.Word (Word8)
 import Data.Word.Wider (Wider(..))
 import Data.Word.Limb (Limb(..))
 import GHC.Word (Word64(..), Word(..))
@@ -137,9 +139,29 @@ validateKeys (Keys sec pub _) = do
   return $ derived == pub
 
 -- | Export secret key as hex string
--- Note: In production, secret keys should never be exported
 exportSecKey :: SecKey -> Text
-exportSecKey _ = "SECRET_KEY_EXPORT_NOT_IMPLEMENTED"
+exportSecKey (Wider (# l0, l1, l2, l3 #)) =
+  let
+    unL (Limb w) = fromIntegral (W# w) :: Word64
+    w0 = unL l0
+    w1 = unL l1
+    w2 = unL l2
+    w3 = unL l3
+    
+    word64ToBytes :: Word64 -> [Word8]
+    word64ToBytes w = 
+      [ fromIntegral (w `shiftR` 56)
+      , fromIntegral (w `shiftR` 48)
+      , fromIntegral (w `shiftR` 40)
+      , fromIntegral (w `shiftR` 32)
+      , fromIntegral (w `shiftR` 24)
+      , fromIntegral (w `shiftR` 16)
+      , fromIntegral (w `shiftR` 8)
+      , fromIntegral w
+      ]
+      
+    allBytes = concatMap word64ToBytes [w0, w1, w2, w3]
+  in bytesToHex $ BS.pack allBytes
 
 -- | Export public key (already in Text format)
 exportPubKey :: PubKey -> Text

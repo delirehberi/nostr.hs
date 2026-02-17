@@ -26,6 +26,8 @@ module Nostr.Client
   , getContacts
   , follow
   , unfollow
+    -- * Helpers
+  , parsePubKey
     -- * Publishing
   , publish
   , publishEvent
@@ -49,6 +51,8 @@ import System.IO (hPutStrLn, stderr)
 import System.Timeout (timeout)
 
 import Nostr.Event
+import qualified Nostr.Event (mkPubKey)
+import Nostr.Nip19 (decode, Nip19Object(..))
 import Nostr.Relay
 import Nostr.Crypto (Keys(..), signEvent)
 
@@ -196,27 +200,27 @@ withReplyTo :: Text -> Text -> EventBuilder -> EventBuilder
 withReplyTo eid relay = withTag ["e", eid, relay]
 
 -- | Mention a user ("p" tag)
--- ["p", <pubkey>]
-withMention :: Text -> EventBuilder -> EventBuilder
-withMention pubkey = withTag ["p", pubkey]
+-- ["p", <pubkey_hex>]
+withMention :: PubKey -> EventBuilder -> EventBuilder
+withMention pubkey = withTag ["p", unPubKey pubkey]
 
 -- | Mention a user with a recommended relay url
--- ["p", <pubkey>, <relay_url>]
-withMentionRelay :: Text -> Text -> EventBuilder -> EventBuilder
-withMentionRelay pubkey relay = withTag ["p", pubkey, relay]
+-- ["p", <pubkey_hex>, <relay_url>]
+withMentionRelay :: PubKey -> Text -> EventBuilder -> EventBuilder
+withMentionRelay pubkey relay = withTag ["p", unPubKey pubkey, relay]
 
 -- | Reference an addressable event ("a" tag)
--- ["a", <kind>:<pubkey>:<d-tag>]
-withAddressRef :: Kind -> Text -> Text -> EventBuilder -> EventBuilder
+-- ["a", <kind>:<pubkey_hex>:<d-tag>]
+withAddressRef :: Kind -> PubKey -> Text -> EventBuilder -> EventBuilder
 withAddressRef kind pubkey dTag = 
-  let addr = T.pack (show kind) <> ":" <> pubkey <> ":" <> dTag
+  let addr = T.pack (show kind) <> ":" <> unPubKey pubkey <> ":" <> dTag
   in withTag ["a", addr]
 
 -- | Reference an addressable event with a recommended relay url
--- ["a", <kind>:<pubkey>:<d-tag>, <relay_url>]
-withAddressRefRelay :: Kind -> Text -> Text -> Text -> EventBuilder -> EventBuilder
+-- ["a", <kind>:<pubkey_hex>:<d-tag>, <relay_url>]
+withAddressRefRelay :: Kind -> PubKey -> Text -> Text -> EventBuilder -> EventBuilder
 withAddressRefRelay kind pubkey dTag relay = 
-  let addr = T.pack (show kind) <> ":" <> pubkey <> ":" <> dTag
+  let addr = T.pack (show kind) <> ":" <> unPubKey pubkey <> ":" <> dTag
   in withTag ["a", addr, relay]
 
 -- ============================================================================
@@ -255,23 +259,36 @@ getContacts keys = do
         in Just $ Contact pubkey relay petname
       _ -> Nothing
 
+-- | Parse a public key from Hex or NIP-19 (npub) string
+parsePubKey :: Text -> Maybe PubKey
+parsePubKey t
+  | "npub1" `T.isPrefixOf` t = case decode t of
+      Right (Nip19Pub pk) -> Just pk
+      _                   -> Nothing
+  | otherwise = case Nostr.Event.mkPubKey t of
+      Right pk -> Just pk
+      _        -> Nothing
+
 -- | Follow a user
-follow :: Keys -> Text -> Maybe Text -> Maybe Text -> NostrApp ()
+follow :: Keys -> PubKey -> Maybe Text -> Maybe Text -> NostrApp ()
 follow keys targetPubkey relay petname = do
   contacts <- getContacts keys
   
   -- Check if already following
-  let startContacts = Prelude.filter (\c -> contactPubkey c /= targetPubkey) contacts
-  let newContact = Contact targetPubkey relay petname
+  -- We compare the hex representation of pubkeys since Contact stores Text
+  let targetHex = unPubKey targetPubkey
+  let startContacts = Prelude.filter (\c -> contactPubkey c /= targetHex) contacts
+  let newContact = Contact targetHex relay petname
   let newContacts = startContacts ++ [newContact]
   
   publishContacts keys newContacts
 
 -- | Unfollow a user
-unfollow :: Keys -> Text -> NostrApp ()
+unfollow :: Keys -> PubKey -> NostrApp ()
 unfollow keys targetPubkey = do
   contacts <- getContacts keys
-  let newContacts = Prelude.filter (\c -> contactPubkey c /= targetPubkey) contacts
+  let targetHex = unPubKey targetPubkey
+  let newContacts = Prelude.filter (\c -> contactPubkey c /= targetHex) contacts
   publishContacts keys newContacts
 
 -- | Helper to publish the contact list

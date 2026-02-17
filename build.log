@@ -1,0 +1,28 @@
+Resolving dependencies...
+Build profile: -w ghc-9.8.2 -O1
+In order, the following will be built (use -v for more details):
+ - nostr-0.1.0.0 (lib) (file lib/Nostr/Client.hs changed)
+ - nostr-0.1.0.0 (exe:nostr-example) (configuration changed)
+Preprocessing library for nostr-0.1.0.0..
+Building library for nostr-0.1.0.0..
+
+<no location info>: warning: [GHC-32850] [-Wmissing-home-modules]
+    These modules are needed for compilation but not listed in your .cabal file's other-modules for `nostr-0.1.0.0-inplace' :
+        Nostr.Nip19
+[2 of 5] Compiling Nostr.Crypto     ( lib/Nostr/Crypto.hs, /home/delirehberi/www/nostr.hs/dist-newstyle/build/x86_64-linux/ghc-9.8.2/nostr-0.1.0.0/build/Nostr/Crypto.o, /home/delirehberi/www/nostr.hs/dist-newstyle/build/x86_64-linux/ghc-9.8.2/nostr-0.1.0.0/build/Nostr/Crypto.dyn_o ) [Source file changed]
+
+lib/Nostr/Crypto.hs:145:33: error: [GHC-18872]
+    * Couldn't match a lifted type with an unlifted type
+      When matching types
+        a0 :: *
+        ghc-prim-0.11.0:GHC.Prim.Word# :: TYPE
+                                            ghc-prim-0.11.0:GHC.Types.WordRep
+    * In the first argument of `fromIntegral', namely `w'
+      In the expression: fromIntegral w :: Word64
+      In an equation for `unL': unL (Limb w) = fromIntegral w :: Word64
+    |
+145 |     unL (Limb w) = fromIntegral w :: Word64
+    |                                 ^
+Error: cabal: Failed to build nostr-0.1.0.0 (which is required by
+exe:nostr-example from nostr-0.1.0.0).
+

@@ -62,7 +62,7 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules:  Nostr.Event , Nostr.Relay, Nostr.Crypto, Nostr.Client 
+    exposed-modules:  Nostr.Event , Nostr.Relay, Nostr.Crypto, Nostr.Client, Nostr.Nip19 
 
     -- Modules included in this library but not exported.
     -- other-modules:
@@ -91,6 +91,7 @@ library
         , mtl
         , time
         , wuss
+        , bech32
 
     -- Directories containing source files.
     hs-source-dirs:   lib

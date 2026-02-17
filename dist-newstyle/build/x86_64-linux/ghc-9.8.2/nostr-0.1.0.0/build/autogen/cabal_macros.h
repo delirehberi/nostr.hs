@@ -50,6 +50,16 @@
   (major1) == 1 && (major2) <  0 || \
   (major1) == 1 && (major2) == 0 && (minor) <= 2)
 #endif /* MIN_VERSION_base16_bytestring */
+/* package bech32-1.1.10 */
+#ifndef VERSION_bech32
+#define VERSION_bech32 "1.1.10"
+#endif /* VERSION_bech32 */
+#ifndef MIN_VERSION_bech32
+#define MIN_VERSION_bech32(major1,major2,minor) (\
+  (major1) <  1 || \
+  (major1) == 1 && (major2) <  1 || \
+  (major1) == 1 && (major2) == 1 && (minor) <= 10)
+#endif /* MIN_VERSION_bech32 */
 /* package bytestring-0.12.1.0 */
 #ifndef VERSION_bytestring
 #define VERSION_bytestring "0.12.1.0"
