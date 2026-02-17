@@ -80,8 +80,8 @@ main = do
          liftIO $ putStrLn $ "Verifying NIP-05: " ++ T.unpack nip05 ++ "..."
          isVerified <- liftIO $ verifyNip05 nip05 pk
          if isVerified 
-           then liftIO $ putStrLn "UNKNOWN: Verified NIP-05 ✅"
-           else liftIO $ putStrLn "WARNING: NIP-05 Verification Failed ❌"
+           then liftIO $ putStrLn "UNKNOWN: Verified NIP-05 [OK]"
+           else liftIO $ putStrLn "WARNING: NIP-05 Verification Failed [FAILED]"
          
          follow keys pk (Just "wss://relay.damus.io") (Just "delirehberi@emre.xyz")
        Nothing -> liftIO $ putStrLn "Error: Not a public key"
