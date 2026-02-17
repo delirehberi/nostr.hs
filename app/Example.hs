@@ -13,6 +13,7 @@ import Nostr.Event
 import Nostr.Relay
 import Nostr.Crypto
 import Nostr.Nip19
+import Nostr.Nip05
 
 main :: IO ()
 main = do
@@ -73,6 +74,15 @@ main = do
     case parsePubKey delirehberiNpub of
        Just pk -> do
          liftIO $ putStrLn $ "Following delirehberi (decoded from " ++ T.unpack delirehberiNpub ++ ")"
+         
+         -- Verify NIP-05
+         let nip05 = "delirehberi@emre.xyz"
+         liftIO $ putStrLn $ "Verifying NIP-05: " ++ T.unpack nip05 ++ "..."
+         isVerified <- liftIO $ verifyNip05 nip05 pk
+         if isVerified 
+           then liftIO $ putStrLn "UNKNOWN: Verified NIP-05 ✅"
+           else liftIO $ putStrLn "WARNING: NIP-05 Verification Failed ❌"
+         
          follow keys pk (Just "wss://relay.damus.io") (Just "delirehberi@emre.xyz")
        Nothing -> liftIO $ putStrLn "Error: Not a public key"
     

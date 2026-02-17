@@ -62,7 +62,7 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules:  Nostr.Event , Nostr.Relay, Nostr.Crypto, Nostr.Client, Nostr.Nip19 
+    exposed-modules:  Nostr.Event , Nostr.Relay, Nostr.Crypto, Nostr.Client, Nostr.Nip19, Nostr.Nip05 
 
     -- Modules included in this library but not exported.
     -- other-modules:
@@ -88,6 +88,7 @@ library
         , containers
         , async
         , stm
+        , http-conduit
         , mtl
         , time
         , wuss
