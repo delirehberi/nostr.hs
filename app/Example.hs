@@ -110,14 +110,9 @@ main = do
         -- Delete the event if it matches our note
         if eventContent e == note then do
           putStrLn $ "Deleting event: " ++ show (eventId e)
-          -- Need to lift this back to NostrApp context, strictly we can't do it inside liftIO
-          -- But we are inside runNostrApp block, so verification code structure needs update
           return ()
         else return ()
         
-    -- To delete, we need the event ID outside liftIO or use `liftIO` carefully?
-    -- Actually, queryEvents returns `events` to the NIP-09 block.
-    -- Let's filter format them.
     
     let eventsToDelete = Prelude.filter (\e -> eventContent e == note) events
     if not (null eventsToDelete) then do
