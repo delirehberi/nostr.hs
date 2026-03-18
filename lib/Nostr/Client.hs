@@ -21,6 +21,9 @@ module Nostr.Client
   , withMentionRelay
   , withAddressRef
   , withAddressRefRelay
+  -- * Threading Tag Combinators (NIP-10)
+  , withReplyToEvent
+  , withRootEvent
     -- * Contact Lists (NIP-02)
   , Contact(..)
   , getContacts
@@ -34,6 +37,7 @@ module Nostr.Client
   , publish
   , publishEvent
   , publishShortNote
+  , publishRepost
     -- * Querying
   , queryEvents
   ) where
@@ -210,6 +214,20 @@ withMention pubkey = withTag ["p", unPubKey pubkey]
 -- ["p", <pubkey_hex>, <relay_url>]
 withMentionRelay :: PubKey -> Text -> EventBuilder -> EventBuilder
 withMentionRelay pubkey relay = withTag ["p", unPubKey pubkey, relay]
+
+-- ============================================================================
+-- NIP-10 Threading Tag Combinators
+-- ============================================================================
+
+-- | Reply to an event (NIP-10 marked "e" tag)
+-- ["e", <event_id>, <relay_url>, "reply", <pubkey>]
+withReplyToEvent :: EventId -> Text -> PubKey -> EventBuilder -> EventBuilder
+withReplyToEvent (EventId eid) relay pubkey = withTag ["e", eid, relay, "reply", unPubKey pubkey]
+
+-- | Mark the root of a thread (NIP-10 marked "e" tag)
+-- ["e", <event_id>, <relay_url>, "root", <pubkey>]
+withRootEvent :: EventId -> Text -> PubKey -> EventBuilder -> EventBuilder
+withRootEvent (EventId eid) relay pubkey = withTag ["e", eid, relay, "root", unPubKey pubkey]
 
 -- | Reference an addressable event ("a" tag)
 -- ["a", <kind>:<pubkey_hex>:<d-tag>]

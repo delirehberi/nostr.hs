@@ -21,6 +21,14 @@ module Nostr.Event
   , Tag
   , Event(..)
   
+  -- * Event Kinds
+  , kindSetMetadata
+  , kindTextNote
+  , kindRecommendRelay
+  , kindContactList
+  , kindEncryptedDirectMessage
+  , kindDeletion
+  
   -- * Constructors and Validators
   , mkEventId
   , mkPubKey
@@ -49,6 +57,25 @@ type Timestamp = Word64
 -- | Event kind as defined in NIP-01
 -- Kinds determine how the event should be interpreted
 type Kind = Int
+
+-- | Standard event kinds
+kindSetMetadata :: Kind
+kindSetMetadata = 0
+
+kindTextNote :: Kind
+kindTextNote = 1
+
+kindRecommendRelay :: Kind
+kindRecommendRelay = 2
+
+kindContactList :: Kind
+kindContactList = 3
+
+kindEncryptedDirectMessage :: Kind
+kindEncryptedDirectMessage = 4
+
+kindDeletion :: Kind
+kindDeletion = 5
 
 -- | Tag is a JSON array of strings
 -- Examples: ["e", "event_id"], ["p", "pubkey"]
