@@ -161,7 +161,42 @@ parseEventId bs =
   in Nostr.Event.mkEventId hex
 
 parseProfileTLV :: ByteString -> Either Text ProfilePtr
-parseProfileTLV _ = Left "TLV parsing not implemented yet"
+parseProfileTLV bs = do
+  tlv <- parseTLV bs
+  let pubkey = findTLV 0 tlv >>= parsePubKey
+  let relays = mapMaybe (fmap TE.decodeUtf8 . findTLV 1) tlv
+  case pubkey of
+    Just pk -> Right $ ProfilePtr pk relays
+    Nothing -> Left "Missing pubkey in nprofile"
 
 parseEventTLV :: ByteString -> Either Text EventPtr
-parseEventTLV _ = Left "TLV parsing not implemented yet"
+parseEventTLV bs = do
+  tlv <- parseTLV bs
+  let eventId = findTLV 0 tlv >>= parseEventId
+  let relays = mapMaybe (fmap TE.decodeUtf8 . findTLV 1) tlv
+  let author = findTLV 2 tlv >>= parsePubKey
+  case eventId of
+    Just eid -> Right $ EventPtr eid relays author
+    Nothing -> Left "Missing event ID in nevent"
+
+-- | Parse TLV data into list of (type, value) pairs
+parseTLV :: ByteString -> Either Text [(Word8, ByteString)]
+parseTLV bs = go bs []
+  where
+    go remaining acc
+      | BS.null remaining = Right (reverse acc)
+      | BS.length remaining < 2 = Left "Incomplete TLV entry"
+      | otherwise = do
+          let typ = BS.head remaining
+          let len = fromIntegral (BS.index remaining 1) :: Int
+          let remaining' = BS.drop 2 remaining
+          if BS.length remaining' < len
+            then Left "TLV value truncated"
+            else do
+              let val = BS.take len remaining'
+              let rest = BS.drop len remaining'
+              go rest ((typ, val) : acc)
+
+-- | Find first TLV entry of given type
+findTLV :: Word8 -> [(Word8, ByteString)] -> Maybe ByteString
+findTLV typ = lookup typ

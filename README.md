@@ -17,7 +17,7 @@ A NIP-01 compliant Nostr library and client implementation in Haskell.
 - [x] NIP-09: Event Deletion Request
 - [x] NIP-10: Text Notes and Threads
 - [x] NIP-19: bech32-encoded entities
-- [ ] NIP-21: nostr: URI scheme
+- [x] NIP-21: nostr: URI scheme
 - [ ] NIP-42: Relay Authentication
 
 
