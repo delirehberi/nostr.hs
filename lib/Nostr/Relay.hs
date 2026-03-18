@@ -67,6 +67,7 @@ data ClientMessage
   = CMEvent Event                           -- ^ ["EVENT", <event>]
   | CMReq SubscriptionId [Filter]           -- ^ ["REQ", <subscription_id>, <filter1>, <filter2>, ...]
   | CMClose SubscriptionId                  -- ^ ["CLOSE", <subscription_id>]
+  | CMAuth Event                            -- ^ ["AUTH", <signed-event>] (NIP-42)
   deriving (Show, Eq, Generic)
 
 instance ToJSON ClientMessage where
@@ -78,6 +79,9 @@ instance ToJSON ClientMessage where
   
   toJSON (CMClose subId) = 
     A.Array $ V.fromList [A.String "CLOSE", A.toJSON subId]
+  
+  toJSON (CMAuth event) = 
+    A.Array $ V.fromList [A.String "AUTH", A.toJSON event]
 
 instance FromJSON ClientMessage where
   parseJSON = withArray "ClientMessage" $ \arr -> do
@@ -106,6 +110,12 @@ instance FromJSON ClientMessage where
         subId <- parseJSON (arr V.! 1)
         return $ CMClose subId
       
+      "AUTH" -> do
+        when (V.length arr /= 2) $
+          fail "AUTH message must have exactly 2 elements"
+        event <- parseJSON (arr V.! 1)
+        return $ CMAuth event
+      
       _ -> fail $ "Unknown client message type: " ++ T.unpack msgType
     where
       when :: Bool -> A.Parser () -> A.Parser ()
@@ -123,6 +133,7 @@ data RelayMessage
   | RMEOSE SubscriptionId                   -- ^ ["EOSE", <subscription_id>]
   | RMClosed SubscriptionId Text            -- ^ ["CLOSED", <subscription_id>, <message>]
   | RMNotice Text                           -- ^ ["NOTICE", <message>]
+  | RMAuth Text                             -- ^ ["AUTH", <challenge-string>] (NIP-42)
   deriving (Show, Eq, Generic)
 
 instance ToJSON RelayMessage where
@@ -140,6 +151,9 @@ instance ToJSON RelayMessage where
   
   toJSON (RMNotice msg) = 
     A.Array $ V.fromList [A.String "NOTICE", A.toJSON msg]
+  
+  toJSON (RMAuth challenge) = 
+    A.Array $ V.fromList [A.String "AUTH", A.toJSON challenge]
 
 instance FromJSON RelayMessage where
   parseJSON = withArray "RelayMessage" $ \arr -> do
@@ -182,6 +196,12 @@ instance FromJSON RelayMessage where
           fail "NOTICE message must have exactly 2 elements"
         msg <- parseJSON (arr V.! 1)
         return $ RMNotice msg
+      
+      "AUTH" -> do
+        when (V.length arr /= 2) $
+          fail "AUTH message must have exactly 2 elements"
+        challenge <- parseJSON (arr V.! 1)
+        return $ RMAuth challenge
       
       _ -> fail $ "Unknown relay message type: " ++ T.unpack msgType
     where

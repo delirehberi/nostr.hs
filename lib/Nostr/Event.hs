@@ -28,6 +28,7 @@ module Nostr.Event
   , kindContactList
   , kindEncryptedDirectMessage
   , kindDeletion
+  , kindAuth
   
   -- * Constructors and Validators
   , mkEventId
@@ -76,6 +77,9 @@ kindEncryptedDirectMessage = 4
 
 kindDeletion :: Kind
 kindDeletion = 5
+
+kindAuth :: Kind
+kindAuth = 22242
 
 -- | Tag is a JSON array of strings
 -- Examples: ["e", "event_id"], ["p", "pubkey"]

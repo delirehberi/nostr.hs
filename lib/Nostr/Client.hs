@@ -38,6 +38,9 @@ module Nostr.Client
   , publishEvent
   , publishShortNote
   , publishRepost
+    -- * Relay Authentication (NIP-42)
+  , createAuthEvent
+  , authenticate
     -- * Querying
   , queryEvents
   ) where
@@ -364,3 +367,25 @@ publish keys eb = do
 -- | Convenience: publish a kind-1 text note (no tags)
 publishShortNote :: Keys -> Text -> NostrApp ()
 publishShortNote keys content = publish keys (shortNote content)
+
+-- ============================================================================
+-- NIP-42 Relay Authentication
+-- ============================================================================
+
+-- | Create an authentication event (kind 22242) for NIP-42
+-- This creates an unsigned event that should be signed and sent as AUTH
+createAuthEvent :: PubKey -> Text -> Text -> Event
+createAuthEvent pubkey relayUrl challenge = 
+  createUnsignedEvent pubkey 0 kindAuth [["relay", relayUrl], ["challenge", challenge]] ""
+
+-- | Authenticate with a relay using NIP-42
+-- Signs and sends an AUTH event with the given challenge
+authenticate :: Keys -> Text -> Text -> NostrApp ()
+authenticate keys relayUrl challenge = do
+  now <- liftIO $ round <$> getPOSIXTime
+  let unsigned = createAuthEvent (keysPubKey keys) relayUrl challenge
+      signed = unsigned { eventCreatedAt = now }
+  signedResult <- liftIO $ signEvent (keysSecKey keys) signed
+  case signedResult of
+    Right event -> sendMessage (CMAuth event)
+    Left err -> liftIO $ hPutStrLn stderr $ "Failed to sign auth event: " ++ T.unpack err
